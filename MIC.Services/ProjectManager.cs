@@ -8,17 +8,36 @@ using System.Linq;
 
 namespace MIC.Services
 {
+    /// <summary>
+    /// 项目/方案管理器。负责加载、保存、创建工作流和其他配置。
+    /// 方案存储在 /bin/Debug/Solutions/ 目录下，每个方案包含 project.json、devices.json、dashboard.json 和 Workflows/ 目录
+    /// </summary>
     public class ProjectManager
     {
         private readonly ILoggerService _logger;
-        // 方案根目录：/bin/Debug/Solutions/
+        /// <summary>
+        /// 方案根目录：/bin/Debug/Solutions/
+        /// </summary>
         private readonly string _solutionsRoot = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Solutions");
 
+        /// <summary>
+        /// 当前活跃的项目/方案
+        /// </summary>
         public SolutionProject ActiveProject { get; private set; }
-        // 内存中缓存当前加载的所有流程
+        
+        /// <summary>
+        /// 内存中缓存当前加载的所有工作流
+        /// </summary>
         public List<WorkflowDefine> ActiveWorkflows { get; private set; } = new List<WorkflowDefine>();
-        public DashboardConfig ActiveDashboard { get; private set; } // 新增：当前方案的UI配置
+        
+        /// <summary>
+        /// 当前方案的 UI 配置（Dashboard 配置）
+        /// </summary>
+        public DashboardConfig ActiveDashboard { get; private set; }
 
+        /// <summary>
+        /// 初始化项目管理器。如果解决方案根目录不存在则创建
+        /// </summary>
         public ProjectManager(ILoggerService logger)
         {
             _logger = logger;
@@ -26,8 +45,10 @@ namespace MIC.Services
         }
 
         /// <summary>
-        /// 加载指定方案
+        /// 加载指定的项目/方案。包括加载主配置、Dashboard 配置和所有工作流
         /// </summary>
+        /// <param name="projectName">项目名称</param>
+        /// <exception cref="DirectoryNotFoundException">当项目目录不存在时抛出</exception>
         public void LoadProject(string projectName)
         {
             string projectDir = Path.Combine(_solutionsRoot, projectName);
@@ -48,7 +69,7 @@ namespace MIC.Services
                 ActiveDashboard = new DashboardConfig { Title = "Default Dashboard" };
             }
 
-            // 3. 加载流程文件
+            // 3. 加载工作流文件
             ActiveWorkflows.Clear();
             string wfDir = Path.Combine(projectDir, "Workflows");
             if (Directory.Exists(wfDir))
@@ -67,7 +88,7 @@ namespace MIC.Services
         }
 
         /// <summary>
-        /// 保存当前方案及所有流程
+        /// 保存当前活跃的项目及所有工作流到磁盘。将内存中的配置写入相应的 JSON 文件
         /// </summary>
         public void SaveActiveProject()
         {
@@ -80,7 +101,7 @@ namespace MIC.Services
             string projFile = Path.Combine(projectDir, "project.json");
             JsonConfigHelper.SaveConfig(projFile, ActiveProject);
 
-            // 2.保存 Dashboard 文件
+            // 2. 保存 Dashboard 文件
             string dbFile = Path.Combine(projectDir, ActiveProject.UIConfigFile);
             JsonConfigHelper.SaveConfig(dbFile, ActiveDashboard);
 
@@ -102,8 +123,11 @@ namespace MIC.Services
         }
 
         /// <summary>
-        /// 新建一个流程（仅内存操作，需调用 Save 生效）
+        /// 新建一个工作流（仅在内存中操作，需调用 SaveActiveProject 才能生效）
         /// </summary>
+        /// <param name="name">工作流名称</param>
+        /// <returns>创建的新工作流对象</returns>
+        /// <exception cref="Exception">当工作流名称已存在时抛出</exception>
         public WorkflowDefine CreateWorkflow(string name)
         {
             if (ActiveWorkflows.Any(w => w.Name == name))
@@ -122,8 +146,9 @@ namespace MIC.Services
         }
 
         /// <summary>
-        /// 删除流程
+        /// 删除工作流。同时从内存、配置和磁盘中删除
         /// </summary>
+        /// <param name="wf">要删除的工作流对象</param>
         public void RemoveWorkflow(WorkflowDefine wf)
         {
             if (ActiveWorkflows.Contains(wf))
@@ -139,8 +164,10 @@ namespace MIC.Services
         }
 
         /// <summary>
-        /// 创建新方案结构
+        /// 创建新方案的完整目录结构。包括项目根目录、Workflows 子目录和默认配置文件
         /// </summary>
+        /// <param name="projectName">新方案的名称</param>
+        /// <exception cref="Exception">当方案已存在时抛出</exception>
         public void CreateNewSolutionStructure(string projectName)
         {
             string dir = Path.Combine(_solutionsRoot, projectName);

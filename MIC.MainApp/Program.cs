@@ -1,7 +1,7 @@
-﻿using MIC.Core.Interfaces;
+﻿using DryIoc.Microsoft.DependencyInjection;
+using MIC.Core.Interfaces;
 using MIC.Infrastructure.Database;
 using MIC.Infrastructure.Logging;
-using MIC.MainApp.Forms;
 using MIC.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -9,6 +9,8 @@ using Microsoft.Extensions.Logging; // 必须引用：标准日志接口
 using NLog.Extensions.Logging;      // 必须引用：NLog 适配器
 using System;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace MIC.MainApp
@@ -16,7 +18,7 @@ namespace MIC.MainApp
     static class Program
     {
         /// <summary>
-        /// 应用程序的主入口点。
+        /// 应用程序的主入口点。初始化 WinForms 应用程序，创建 DI 容器，启动主窗体
         /// </summary>
         [STAThread]
         static void Main()
@@ -26,16 +28,16 @@ namespace MIC.MainApp
 
             try
             {
-                Application.EnableVisualStyles();
-                Application.SetCompatibleTextRenderingDefault(false);
-
                 // 1. 创建 Host 并在其中注册所有服务
                 var host = CreateHostBuilder().Build();
 
                 // 2. 将 Host 交给 GlobalContext 方便全局访问
                 GlobalContext.Initialize(host);
 
-                // 3. 从 DI 容器中解析主窗体并运行
+                // 3. 启动后台服务
+                host.Start();
+
+                // 4. 从 DI 容器中解析主窗体并运行
                 var mainForm = host.Services.GetRequiredService<MainForm>();
                 Application.Run(mainForm);
             }
@@ -44,39 +46,34 @@ namespace MIC.MainApp
                 MessageBox.Show("启动严重错误: " + ex.Message);
             }
         }
-    
 
-    static IHostBuilder CreateHostBuilder() =>
+        /// <summary>
+        /// 创建并配置 DI 容器。注册所有应用程序需要的服务（日志、数据库、业务服务等）
+        /// </summary>
+        static IHostBuilder CreateHostBuilder() =>
         Host.CreateDefaultBuilder()
+            .UseServiceProviderFactory(new DryIocServiceProviderFactory())
             .ConfigureLogging((hostContext, logging) =>
                 {
-            // 1. 清除默认提供程序（也就是移除默认的 Console, Debug 等）
-            logging.ClearProviders();
+                    // 1. 清除默认提供程序（也就是移除默认的 Console, Debug 等）
+                    logging.ClearProviders();
 
-            // 2. 设置最小日志级别（这里设为 Trace，具体由 NLog.config 接管控制）
-            logging.SetMinimumLevel(LogLevel.Trace);
+                    // 2. 设置最小日志级别（这里设为 Trace，具体由 NLog.config 接管控制）
+                    logging.SetMinimumLevel(LogLevel.Trace);
 
-            // 3. 注入 NLog
-            // 这行代码会将 NLog 绑定到 ILogger<T> 接口上
-            logging.AddNLog();
-        })
+                    // 3. 注入 NLog
+                    // 这行代码会将 NLog 绑定到 ILogger<T> 接口上
+                    logging.AddNLog();
+                })
             .ConfigureServices((hostContext, services) =>
             {
-                // 注意：你之前的 services.AddSingleton<ILoggerService, NLogLogger>(); 
-                // 如果你彻底转向微软标准 ILogger，这一行其实可以删掉了。
-                // 但为了兼容旧代码，你可以保留它，或者让 NLogLogger 内部也调用 ILogger<T>。
-
-                // 1. 先实例化一个临时的 Logger 和 Loader 用于扫描
-                var tempLogger = new NLogLogger();
-                var loader = new PluginLoader(tempLogger);
-                var driverMap = loader.DiscoverDrivers(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Plugins"));
+                // 注册 HostedService
+                services.AddHostedService<PollingService>();
+                services.AddHostedService<WorkflowEngine>();
 
                 // --- 基础基础设施 (Singleton) ---
                 services.AddSingleton<ILoggerService, NLogLogger>();
                 services.AddSingleton<SqliteDapperHelper>();
-
-                //  注册驱动工厂 (注入发现的驱动映射表)
-                services.AddSingleton<IDriverFactory>(sp => new DriverFactory(sp, driverMap));
 
                 // --- 权限管理 ---
                 services.AddSingleton<AuthService>();
@@ -92,10 +89,35 @@ namespace MIC.MainApp
                 // --- 插件管理器 (Singleton) ---
                 services.AddSingleton<PluginLoader>();
 
-                // --- 窗体也注册到 DI 中，这样窗体也可以通过构造函数接收服务 ---
-                services.AddTransient<MainForm>();
-                services.AddTransient<WorkflowEditorForm>();
+                // 动态加载插件并注册
+                RegisterPlugins(services);
             });
 
-    } 
+        /// <summary>
+        /// 动态加载插件并注册到 DI 容器
+        /// </summary>
+        /// <param name="services">服务集合</param>
+        private static void RegisterPlugins(IServiceCollection services)
+        {
+            var pluginPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Plugins");
+            if (!Directory.Exists(pluginPath)) return;
+
+            foreach (var dll in Directory.GetFiles(pluginPath, "*.dll"))
+            {
+                try
+                {
+                    var assembly = Assembly.LoadFrom(dll);
+                    var types = assembly.GetTypes().Where(t => typeof(IDeviceDriver).IsAssignableFrom(t) && !t.IsInterface);
+                    foreach (var type in types)
+                    {
+                        services.AddTransient(type);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to load plugin {dll}: {ex.Message}");
+                }
+            }
+        }
+    }
 }

@@ -8,22 +8,50 @@ using Microsoft.Extensions.Logging; // 仅引用这个官方抽象库
 
 namespace MIC.Plugin.Modbus
 {
+    /// <summary>
+    /// Modbus TCP 驱动实现。基于 HslCommunication 库，实现标准的 Modbus TCP 通信协议
+    /// 用于与 PLC 和其他 Modbus 兼容的工业设备通信
+    /// </summary>
     public class ModbusTcpDriver : IDeviceDriver
     {
+        /// <summary>
+        /// HslCommunication Modbus TCP 客户端实例
+        /// </summary>
         private ModbusTcpNet _modbusClient;
+        
+        /// <summary>
+        /// 设备唯一标识
+        /// </summary>
         public string DeviceId { get; set; }
+        
+        /// <summary>
+        /// 设备名称常量
+        /// </summary>
         public string DeviceName => "Standard Modbus TCP";
+        
+        /// <summary>
+        /// 设备当前连接状态
+        /// </summary>
         public bool IsConnected { get; private set; } = false;
 
-        // 使用标准泛型接口，泛型参数会自动标记日志来源为 "MIC.Plugin.Modbus.ModbusTcpDriver"
+        /// <summary>
+        /// 通过依赖注入获取的日志服务（标准 Microsoft.Extensions.Logging）
+        /// </summary>
         private readonly ILogger<ModbusTcpDriver> _logger;
 
-        // DI 容器会自动注入这个 logger，底层其实是 NLog，但插件不知道也不关心
+        /// <summary>
+        /// 构造函数。通过 DI 容器自动注入日志服务
+        /// </summary>
+        /// <param name="logger">日志服务（底层由 NLog 实现）</param>
         public ModbusTcpDriver(ILogger<ModbusTcpDriver> logger)
         {
             _logger = logger;
         }
 
+        /// <summary>
+        /// 初始化驱动。解析配置 JSON，创建 Modbus TCP 客户端实例
+        /// </summary>
+        /// <param name="configJson">配置 JSON 字符串，应包含 "Ip" 和 "Port" 字段</param>
         public void Initialize(string configJson)
         {
             // 使用标准日志方法
@@ -31,7 +59,6 @@ namespace MIC.Plugin.Modbus
 
             try
             {
-                // 模拟解析逻辑
                 // 解析配置：假设 configJson 包含 IpAddress 和 Port
                 var config = JObject.Parse(configJson);
                 string ip = config["Ip"]?.ToString() ?? "127.0.0.1";
@@ -46,6 +73,10 @@ namespace MIC.Plugin.Modbus
             }
         }
 
+        /// <summary>
+        /// 连接到 Modbus TCP 服务器
+        /// </summary>
+        /// <returns>连接成功返回 true</returns>
         public bool Connect()
         {
             OperateResult connect = _modbusClient.ConnectServer();
@@ -54,6 +85,9 @@ namespace MIC.Plugin.Modbus
             return IsConnected;
         }
 
+        /// <summary>
+        /// 断开 Modbus TCP 连接
+        /// </summary>
         public void Disconnect()
         {
             _modbusClient?.ConnectClose();
@@ -61,6 +95,14 @@ namespace MIC.Plugin.Modbus
             IsConnected = false;
         }
 
+        /// <summary>
+        /// 异步读取寄存器数据。支持 int16、float、bool 等类型
+        /// </summary>
+        /// <typeparam name="T">数据类型</typeparam>
+        /// <param name="address">寄存器地址</param>
+        /// <returns>读取的数据值</returns>
+        /// <exception cref="Exception">设备未连接时抛出</exception>
+        /// <exception cref="NotSupportedException">不支持的数据类型</exception>
         public async Task<T> ReadAsync<T>(string address)
         {
             if (!IsConnected) throw new Exception("Device not connected");
@@ -76,6 +118,13 @@ namespace MIC.Plugin.Modbus
             throw new NotSupportedException($"Type {typeof(T)} not supported yet.");
         }
 
+        /// <summary>
+        /// 异步向寄存器写入数据。支持 int16、float、bool 等类型
+        /// </summary>
+        /// <typeparam name="T">数据类型</typeparam>
+        /// <param name="address">寄存器地址</param>
+        /// <param name="value">要写入的数据值</param>
+        /// <returns>写入成功返回 true</returns>
         public async Task<bool> WriteAsync<T>(string address, T value)
         {
             if (!IsConnected) return false;

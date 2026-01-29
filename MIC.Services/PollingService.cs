@@ -1,23 +1,20 @@
 ﻿using MIC.Core.Interfaces;
+using Microsoft.Extensions.Hosting;
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace MIC.Services
 {
     /// <summary>
-    /// 高性能异步采集引擎
+    /// 轮询服务，改造为 IHostedService 实现。
     /// </summary>
-    public class PollingService
+    public class PollingService : IHostedService
     {
         private readonly DeviceManager _deviceManager;
         private readonly ILoggerService _logger;
         private CancellationTokenSource _cts;
-        private bool _isPolling = false;
-
-        // 定义数据到达事件，UI订阅此事件即可更新
-        public event Action<string, string, object> DataReceived;
+        private Task _pollingTask;
 
         public PollingService(DeviceManager deviceManager, ILoggerService logger)
         {
@@ -25,22 +22,22 @@ namespace MIC.Services
             _logger = logger;
         }
 
-        public void Start()
+        public Task StartAsync(CancellationToken cancellationToken)
         {
-            if (_isPolling) return;
-            _isPolling = true;
-            _cts = new CancellationTokenSource();
-
-            // 开启后台采集任务
-            Task.Run(() => PollLoop(_cts.Token));
-            _logger.Info("采集引擎已启动");
+            _logger.Info("轮询服务启动");
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _pollingTask = Task.Run(() => PollLoop(_cts.Token));
+            return Task.CompletedTask;
         }
 
-        public void Stop()
+        public async Task StopAsync(CancellationToken cancellationToken)
         {
-            _cts?.Cancel();
-            _isPolling = false;
-            _logger.Info("采集引擎已停止");
+            _logger.Info("轮询服务停止");
+            _cts.Cancel();
+            if (_pollingTask != null)
+            {
+                await _pollingTask;
+            }
         }
 
         private async Task PollLoop(CancellationToken token)
@@ -51,27 +48,14 @@ namespace MIC.Services
                 {
                     if (!device.IsConnected)
                     {
-                        // 自动重连逻辑
                         await Task.Run(() => device.Connect());
                         continue;
                     }
-
-                    // 这里可以根据 dashboard.json 配置的地址进行读取
-                    // 简化演示：假设我们要读取一些预设地址
-                    try
-                    {
-                        // 示例：异步读取
-                        var val = await device.ReadAsync<short>("40001");
-                        DataReceived?.Invoke(device.DeviceId, "40001", val);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Error($"读取设备 {device.DeviceId} 失败: {ex.Message}");
-                    }
+                    // 模拟数据读取逻辑
+                    var data = await device.ReadAsync<object>("address");
+                    _logger.Info($"读取数据: {data}");
                 }
-
-                // 采集频率控制，例如 500ms
-                await Task.Delay(500, token);
+                await Task.Delay(1000, token); // 每秒轮询一次
             }
         }
     }

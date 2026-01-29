@@ -4,16 +4,33 @@ using System.Text;
 
 namespace MIC.Services
 {
+    /// <summary>
+    /// 认证服务。负责用户登录验证和身份管理。使用 MD5 哈希存储密码（生产环境应使用更安全的算法）
+    /// </summary>
     public class AuthService
     {
-        // 定义 CurrentUser 属性
+        /// <summary>
+        /// 当前登录的用户信息
+        /// </summary>
         public User CurrentUser { get; private set; }
 
+        /// <summary>
+        /// 验证用户登录。检查用户名和密码是否正确
+        /// </summary>
+        /// <param name="username">用户名</param>
+        /// <param name="password">密码</param>
+        /// <returns>登录成功返回 true</returns>
         public bool Login(string username, string password)
         {
             return ValidateLogin(username, password);
         }
 
+        /// <summary>
+        /// 执行登录验证逻辑。比较输入的密码哈希与存储的密码哈希
+        /// </summary>
+        /// <param name="username">用户名</param>
+        /// <param name="password">密码</param>
+        /// <returns>验证成功返回 true，并设置 CurrentUser</returns>
         private bool ValidateLogin(string username, string password)
         {
             // 简单演示逻辑（实际应查询数据库）
@@ -22,7 +39,7 @@ namespace MIC.Services
 
             if (username == "admin" && inputHash == storedHash)
             {
-                // 变量名 user -> username，并赋值给属性
+                // 验证成功，设置当前用户
                 CurrentUser = new User
                 {
                     Username = username,
@@ -33,6 +50,11 @@ namespace MIC.Services
             return false;
         }
 
+        /// <summary>
+        /// 计算字符串的 MD5 哈希值
+        /// </summary>
+        /// <param name="input">输入字符串</param>
+        /// <returns>MD5 哈希值（十六进制字符串）</returns>
         private string GetMd5Hash(string input)
         {
             using (MD5 md5 = MD5.Create())

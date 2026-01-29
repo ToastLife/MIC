@@ -5,6 +5,8 @@ using MIC.MainApp.Forms;
 using MIC.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging; // 必须引用：标准日志接口
+using NLog.Extensions.Logging;      // 必须引用：NLog 适配器
 using System;
 using System.IO;
 using System.Windows.Forms;
@@ -46,8 +48,24 @@ namespace MIC.MainApp
 
     static IHostBuilder CreateHostBuilder() =>
         Host.CreateDefaultBuilder()
+            .ConfigureLogging((hostContext, logging) =>
+                {
+            // 1. 清除默认提供程序（也就是移除默认的 Console, Debug 等）
+            logging.ClearProviders();
+
+            // 2. 设置最小日志级别（这里设为 Trace，具体由 NLog.config 接管控制）
+            logging.SetMinimumLevel(LogLevel.Trace);
+
+            // 3. 注入 NLog
+            // 这行代码会将 NLog 绑定到 ILogger<T> 接口上
+            logging.AddNLog();
+        })
             .ConfigureServices((hostContext, services) =>
             {
+                // 注意：你之前的 services.AddSingleton<ILoggerService, NLogLogger>(); 
+                // 如果你彻底转向微软标准 ILogger，这一行其实可以删掉了。
+                // 但为了兼容旧代码，你可以保留它，或者让 NLogLogger 内部也调用 ILogger<T>。
+
                 // 1. 先实例化一个临时的 Logger 和 Loader 用于扫描
                 var tempLogger = new NLogLogger();
                 var loader = new PluginLoader(tempLogger);

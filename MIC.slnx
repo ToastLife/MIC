@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/MIC.Plugins/">
+    <Project Path="MIC.Plugin.MES/MIC.Plugin.MES.csproj" Id="026a0e79-4e63-4f63-b958-081bf4345939" />
+    <Project Path="MIC.Plugin.Modbus/MIC.Plugin.Modbus.csproj" Id="6b58b926-2ade-4484-8596-9e1935f33bdc" />
+    <Project Path="MIC.Plugin.Vision/MIC.Plugin.Vision.csproj" Id="de7ce75c-93cc-40fa-9073-6e7aa23fda13" />
+  </Folder>
+  <Project Path="MIC.Core/MIC.Core.csproj" Id="02433f0e-39d3-469b-9e36-fdbc26474fcc" />
+  <Project Path="MIC.Infrastructure/MIC.Infrastructure.csproj" Id="26234d08-ee1a-4eec-b9bd-20a8f4881cc5" />
+  <Project Path="MIC.MainApp/MIC.MainApp.csproj" Id="9e2f9126-d3d7-4fbf-8cdc-baa7daa8aa08" />
+  <Project Path="MIC.Models/MIC.Models.csproj" Id="ef7847ce-7e23-449a-8d12-2bb79beea9a7" />
+  <Project Path="MIC.Services/MIC.Services.csproj" Id="38e8cd8e-5e5f-4a93-b81d-ff72334b909c" />
+</Solution>

@@ -1,0 +1,29 @@
+MIC.Solution
+│
+├── 01.MIC.Core                (类库 - 核心契约，无第三方依赖)
+│   ├── Interfaces             (IPlugin, ILog, IRepository, IDevice)
+│   ├── Entities               (基础实体接口)
+│   └── Constants              (全局常量)
+│
+├── 02.MIC.Models              (类库 - 数据模型)
+│   ├── DTOs                   (数据传输对象)
+│   ├── Entities               (数据库实体：User, Alarm, DeviceConfig)
+│   └── Enums                  (枚举：DeviceState, RoleType)
+│
+├── 03.MIC.Infrastructure      (类库 - 基础设施实现)
+│   ├── Logging                (NLog封装实现 ILog)
+│   ├── Config                 (Newtonsoft.Json 配置读写)
+│   └── Database               (SQLite/Dapper 简单封装)
+│
+├── 04.MIC.Services            (类库 - 业务逻辑)
+│   ├── AuthService.cs         (权限管理)
+│   ├── DeviceManager.cs       (设备驱动管理引擎)
+│   └── DataService.cs         (数据持久化逻辑)
+│
+├── 05.MIC.Plugin.Modbus       (类库 - HslCommunication 插件实现)
+│   └── ModbusTcpDriver.cs     (实现 IDevice 接口)
+│
+└── 06.MIC.MainApp             (WinForms - 启动入口)
+    ├── Forms                  (MainForm, LoginForm)
+    ├── Program.cs             (程序入口，依赖注入/服务定位)
+    └── App.config

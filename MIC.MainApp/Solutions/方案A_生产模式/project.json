@@ -1,0 +1,10 @@
+{
+    "Name": "方案A_生产模式",
+    "Description": "适用于2024款产品的标准生产逻辑",
+    "DeviceConfigFile": "devices.json",
+    "UIConfigFile": "dashboard.json",
+    "WorkflowFiles": [
+        "开机流程.json",
+        "自动运行.json"
+    ]
+}

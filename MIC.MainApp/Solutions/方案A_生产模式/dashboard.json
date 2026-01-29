@@ -1,0 +1,50 @@
+{
+    "Title": "主生产线监控界面",
+    "ColumnCount": 12,
+    "Widgets": [
+        {
+            "Name": "反应釜温度",
+            "Type": "ValueDisplay",
+            "X": 0,
+            "Y": 0,
+            "Width": 2,
+            "Height": 1,
+            "DeviceId": "PLC_Main",
+            "Address": "D100",
+            "Format": "0.0 ℃"
+        },
+        {
+            "Name": "系统压力",
+            "Type": "TrendChart",
+            "X": 2,
+            "Y": 0,
+            "Width": 4,
+            "Height": 3,
+            "DeviceId": "PLC_Main",
+            "Address": "D102",
+            "Format": "0.00 MPa"
+        },
+        {
+            "Name": "运行状态",
+            "Type": "StateIndicator",
+            "X": 0,
+            "Y": 1,
+            "Width": 1,
+            "Height": 1,
+            "DeviceId": "PLC_Main",
+            "Address": "M10",
+            "Text": "运行/停止"
+        },
+        {
+            "Name": "紧急停机",
+            "Type": "ActionButton",
+            "X": 0,
+            "Y": 2,
+            "Width": 2,
+            "Height": 1,
+            "DeviceId": "PLC_Main",
+            "Address": "M100",
+            "Text": "EMG STOP"
+        }
+    ]
+}

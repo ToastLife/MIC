@@ -1,0 +1,50 @@
+{
+    "Guid": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+    "Name": "开机流程",
+    "Steps": [
+        {
+            "Id": 10,
+            "Name": "复位所有设备",
+            "Action": "Write",
+            "DeviceId": "PLC_Main",
+            "Address": "100",
+            "TargetValue": "1",
+            "TimeoutMs": 1000,
+            "NextStepId": 20,
+            "ErrorStepId": 999
+        },
+        {
+            "Id": 20,
+            "Name": "等待设备就绪",
+            "Action": "WaitValue",
+            "DeviceId": "PLC_Main",
+            "Address": "101",
+            "TargetValue": "True",
+            "TimeoutMs": 5000,
+            "NextStepId": 30,
+            "ErrorStepId": 999
+        },
+        {
+            "Id": 30,
+            "Name": "开启绿灯",
+            "Action": "Write",
+            "DeviceId": "PLC_Main",
+            "Address": "200",
+            "TargetValue": "1",
+            "TimeoutMs": 1000,
+            "NextStepId": 0,
+            "ErrorStepId": 0
+        },
+        {
+            "Id": 999,
+            "Name": "报警停机",
+            "Action": "Write",
+            "DeviceId": "PLC_Main",
+            "Address": "300",
+            "TargetValue": "1",
+            "TimeoutMs": 1000,
+            "NextStepId": 0,
+            "ErrorStepId": 0
+        }
+    ]
+}

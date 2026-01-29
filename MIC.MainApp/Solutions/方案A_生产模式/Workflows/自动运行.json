@@ -1,0 +1,28 @@
+{
+    "Guid": "f0e1d2c3-b4a5-6789-0123-abcdef123456",
+    "Name": "自动运行",
+    "Steps": [
+        {
+            "Id": 10,
+            "Name": "延时启动",
+            "Action": "Delay",
+            "DeviceId": "",
+            "Address": "",
+            "TargetValue": "2000",
+            "TimeoutMs": 0,
+            "NextStepId": 20,
+            "ErrorStepId": 0
+        },
+        {
+            "Id": 20,
+            "Name": "检查温度",
+            "Action": "WaitValue",
+            "DeviceId": "Temp_Sensor_01",
+            "Address": "40001",
+            "TargetValue": "120.5",
+            "TimeoutMs": 10000,
+            "NextStepId": 0,
+            "ErrorStepId": 999
+        }
+    ]
+}

@@ -3,6 +3,7 @@ using MIC.Core.Interfaces;
 using MIC.Infrastructure.Database;
 using MIC.Infrastructure.Logging;
 using MIC.Services;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging; // 必须引用：标准日志接口
@@ -40,6 +41,10 @@ namespace MIC.MainApp
                 // 4. 从 DI 容器中解析主窗体并运行
                 var mainForm = host.Services.GetRequiredService<MainForm>();
                 Application.Run(mainForm);
+
+                // UI 退出后停机
+                host.StopAsync().GetAwaiter().GetResult();
+                host.Dispose();
             }
             catch (Exception ex)
             {
@@ -52,6 +57,10 @@ namespace MIC.MainApp
         /// </summary>
         static IHostBuilder CreateHostBuilder() =>
         Host.CreateDefaultBuilder()
+            .ConfigureAppConfiguration((context, config) =>
+            {
+                config.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+            })
             .UseServiceProviderFactory(new DryIocServiceProviderFactory())
             .ConfigureLogging((hostContext, logging) =>
                 {
@@ -67,6 +76,11 @@ namespace MIC.MainApp
                 })
             .ConfigureServices((hostContext, services) =>
             {
+                var configuration = hostContext.Configuration;
+
+                // 注册配置
+                services.AddSingleton(configuration);
+
                 // 注册 HostedService
                 services.AddHostedService<PollingService>();
                 services.AddHostedService<WorkflowEngine>();
@@ -89,17 +103,21 @@ namespace MIC.MainApp
                 // --- 插件管理器 (Singleton) ---
                 services.AddSingleton<PluginLoader>();
 
+                // --- 主窗体 (Singleton) ---
+                services.AddSingleton<MainForm>();
+
                 // 动态加载插件并注册
-                RegisterPlugins(services);
+                RegisterPlugins(services, configuration);
             });
 
         /// <summary>
         /// 动态加载插件并注册到 DI 容器
         /// </summary>
         /// <param name="services">服务集合</param>
-        private static void RegisterPlugins(IServiceCollection services)
+        /// <param name="configuration">应用程序配置</param>
+        private static void RegisterPlugins(IServiceCollection services, IConfiguration configuration)
         {
-            var pluginPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Plugins");
+            var pluginPath = configuration["Plugins:Path"];
             if (!Directory.Exists(pluginPath)) return;
 
             foreach (var dll in Directory.GetFiles(pluginPath, "*.dll"))

@@ -2,6 +2,7 @@
 using MIC.Services;
 using System;
 using System.Windows.Forms;
+using Microsoft.Extensions.Configuration;
 
 namespace MIC.MainApp.Forms
 {
@@ -71,7 +72,11 @@ namespace MIC.MainApp.Forms
             _mgr.ActiveProject.Description = txtDesc.Text;
             // 注意：Name通常作为文件夹名，修改比较麻烦，此处暂不演示改名
 
-            _mgr.SaveActiveProject();
+            // 保存配置到 appsettings.json
+            var configuration = GlobalContext.GetService<IConfiguration>();
+            var section = configuration.GetSection("SolutionProject");
+            section.Get<SolutionProject>().Description = txtDesc.Text;
+
             MessageBox.Show("方案及所有流程已保存！");
         }
     }

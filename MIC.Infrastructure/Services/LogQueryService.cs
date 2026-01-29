@@ -2,6 +2,7 @@
 using MIC.Core.Entities;
 using MIC.Core.Interfaces;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
@@ -24,11 +25,10 @@ namespace MIC.Infrastructure.Services
         /// <summary>
         /// 初始化日志查询服务。设置数据库文件路径和连接字符串。
         /// </summary>
-        public LogQueryService()
+        public LogQueryService(IOptions<DatabaseOptions> options)
         {
-            // 指向与 NLog 相同的数据库文件
-            string dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "mic_data.db");
-            _connectionString = $"Data Source={dbPath};";
+            // 使用 IOptions 注入数据库连接字符串
+            _connectionString = options.Value.ConnectionString;
         }
 
         /// <summary>
@@ -68,5 +68,13 @@ namespace MIC.Infrastructure.Services
                 });
             }
         }
+    }
+
+    /// <summary>
+    /// 数据库配置选项。
+    /// </summary>
+    public class DatabaseOptions
+    {
+        public string ConnectionString { get; set; }
     }
 }

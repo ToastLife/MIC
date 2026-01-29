@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Microsoft.Extensions.Configuration;
 
 namespace MIC.Services
 {
@@ -49,20 +50,18 @@ namespace MIC.Services
         /// </summary>
         /// <param name="projectName">项目名称</param>
         /// <exception cref="DirectoryNotFoundException">当项目目录不存在时抛出</exception>
-        public void LoadProject(string projectName)
+        public void LoadProject(string projectName, IConfiguration configuration)
         {
-            string projectDir = Path.Combine(_solutionsRoot, projectName);
-            if (!Directory.Exists(projectDir)) throw new DirectoryNotFoundException($"方案目录不存在: {projectName}");
+            string projectDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Solutions", projectName);
 
             // 1. 加载主配置
-            string projFile = Path.Combine(projectDir, "project.json");
-            ActiveProject = JsonConfigHelper.LoadConfig<SolutionProject>(projFile);
+            ActiveProject = configuration.GetSection("SolutionProject").Get<SolutionProject>();
 
             // 2. 加载 Dashboard 配置
             string dbFile = Path.Combine(projectDir, ActiveProject.UIConfigFile); // 默认 dashboard.json
             if (File.Exists(dbFile))
             {
-                ActiveDashboard = JsonConfigHelper.LoadConfig<DashboardConfig>(dbFile);
+                ActiveDashboard = configuration.GetSection("DashboardConfig").Get<DashboardConfig>();
             }
             else
             {
@@ -79,7 +78,7 @@ namespace MIC.Services
                     string fullPath = Path.Combine(wfDir, wfFile);
                     if (File.Exists(fullPath))
                     {
-                        var wf = JsonConfigHelper.LoadConfig<WorkflowDefine>(fullPath);
+                        var wf = configuration.GetSection($"Workflows:{wfFile}").Get<WorkflowDefine>();
                         if (wf != null) ActiveWorkflows.Add(wf);
                     }
                 }
@@ -88,38 +87,31 @@ namespace MIC.Services
         }
 
         /// <summary>
-        /// 保存当前活跃的项目及所有工作流到磁盘。将内存中的配置写入相应的 JSON 文件
+        /// 保存当前活跃的项目及所有工作流到配置。将内存中的配置写入到 IConfiguration
         /// </summary>
-        public void SaveActiveProject()
+        public void SaveActiveProject(IConfiguration configuration)
         {
             if (ActiveProject == null) return;
 
-            string projectDir = Path.Combine(_solutionsRoot, ActiveProject.Name);
-            if (!Directory.Exists(projectDir)) Directory.CreateDirectory(projectDir);
+            // 保存主配置
+            var projectSection = configuration.GetSection("SolutionProject");
+            projectSection.Get<SolutionProject>().Name = ActiveProject.Name;
+            projectSection.Get<SolutionProject>().Description = ActiveProject.Description;
+            projectSection.Get<SolutionProject>().WorkflowFiles = ActiveProject.WorkflowFiles;
 
-            // 1. 保存 project.json
-            string projFile = Path.Combine(projectDir, "project.json");
-            JsonConfigHelper.SaveConfig(projFile, ActiveProject);
+            // 保存 Dashboard 配置
+            var dashboardSection = configuration.GetSection("DashboardConfig");
+            dashboardSection.Get<DashboardConfig>().Title = ActiveDashboard.Title;
 
-            // 2. 保存 Dashboard 文件
-            string dbFile = Path.Combine(projectDir, ActiveProject.UIConfigFile);
-            JsonConfigHelper.SaveConfig(dbFile, ActiveDashboard);
-
-            // 3. 保存 Workflows
-            string wfDir = Path.Combine(projectDir, "Workflows");
-            if (!Directory.Exists(wfDir)) Directory.CreateDirectory(wfDir);
-
-            // 清理旧文件逻辑可在此处添加（略）
-
+            // 保存 Workflows
             foreach (var wf in ActiveWorkflows)
             {
-                // 确保文件名以 .json 结尾
-                string fileName = wf.Name.EndsWith(".json") ? wf.Name : $"{wf.Name}.json";
-                string fullPath = Path.Combine(wfDir, fileName);
-                JsonConfigHelper.SaveConfig(fullPath, wf);
+                var workflowSection = configuration.GetSection($"Workflows:{wf.Name}");
+                workflowSection.Get<WorkflowDefine>().Name = wf.Name;
+                workflowSection.Get<WorkflowDefine>().Steps = wf.Steps;
             }
 
-            _logger.Info("方案已保存到磁盘");
+            _logger.Info("方案已保存到配置");
         }
 
         /// <summary>
@@ -167,8 +159,9 @@ namespace MIC.Services
         /// 创建新方案的完整目录结构。包括项目根目录、Workflows 子目录和默认配置文件
         /// </summary>
         /// <param name="projectName">新方案的名称</param>
+        /// <param name="configuration">应用程序配置</param>
         /// <exception cref="Exception">当方案已存在时抛出</exception>
-        public void CreateNewSolutionStructure(string projectName)
+        public void CreateNewSolutionStructure(string projectName, IConfiguration configuration)
         {
             string dir = Path.Combine(_solutionsRoot, projectName);
             if (Directory.Exists(dir)) throw new Exception("方案已存在");
@@ -183,11 +176,15 @@ namespace MIC.Services
                 Description = "新建方案",
                 WorkflowFiles = new List<string>()
             };
-            JsonConfigHelper.SaveConfig(Path.Combine(dir, "project.json"), proj);
+
+            var projectSection = configuration.GetSection("SolutionProject");
+            projectSection.Get<SolutionProject>().Name = proj.Name;
+            projectSection.Get<SolutionProject>().Description = proj.Description;
+            projectSection.Get<SolutionProject>().WorkflowFiles = proj.WorkflowFiles;
 
             // 创建空的 devices.json 和 dashboard.json
-            File.WriteAllText(Path.Combine(dir, "devices.json"), "[]");
-            File.WriteAllText(Path.Combine(dir, "dashboard.json"), "{}");
+            var dashboardSection = configuration.GetSection("DashboardConfig");
+            dashboardSection.Get<DashboardConfig>().Title = "Default Dashboard";
         }
     }
 }

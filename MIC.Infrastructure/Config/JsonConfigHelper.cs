@@ -1,19 +1,17 @@
 ﻿using Newtonsoft.Json;
+using System;
 using System.IO;
 
 namespace MIC.Infrastructure.Config
 {
     /// <summary>
-    /// JSON 配置文件辅助类。提供保存和加载 JSON 配置文件的通用方法。
+    /// JsonConfigHelper 已弃用，请使用 Microsoft.Extensions.Configuration 替代。
     /// </summary>
+    [Obsolete("Use Microsoft.Extensions.Configuration instead.")]
     public static class JsonConfigHelper
     {
-        /// <summary>
-        /// 保存配置到指定文件路径。
-        /// </summary>
-        /// <typeparam name="T">配置数据的类型</typeparam>
-        /// <param name="filePath">保存的文件路径</param>
-        /// <param name="data">要保存的配置数据</param>
+        // 保留方法以兼容旧代码，但标记为过时
+        [Obsolete("Use IConfiguration for loading configurations.")]
         public static void SaveConfig<T>(string filePath, T data)
         {
             string json = JsonConvert.SerializeObject(data, Formatting.Indented);
@@ -22,28 +20,12 @@ namespace MIC.Infrastructure.Config
             File.WriteAllText(filePath, json);
         }
 
-        /// <summary>
-        /// 从指定文件路径加载配置。
-        /// </summary>
-        /// <typeparam name="T">配置数据的类型</typeparam>
-        /// <param name="filePath">配置文件路径</param>
-        /// <returns>加载的配置数据</returns>
+        [Obsolete("Use IConfiguration for loading configurations.")]
         public static T LoadConfig<T>(string filePath)
         {
             if (!File.Exists(filePath)) return default(T);
             string json = File.ReadAllText(filePath);
             return JsonConvert.DeserializeObject<T>(json);
-        }
-
-        /// <summary>
-        /// 将对象序列化为 JSON 字符串。
-        /// </summary>
-        /// <typeparam name="T">对象的类型</typeparam>
-        /// <param name="json">要序列化的对象</param>
-        /// <returns>序列化后的 JSON 字符串</returns>
-        public static string SerializeObject<T>(T json)
-        {
-            return JsonConvert.SerializeObject(json);
         }
     }
 

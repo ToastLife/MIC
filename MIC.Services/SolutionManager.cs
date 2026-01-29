@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 
 namespace MIC.Services
 {
@@ -35,28 +36,44 @@ namespace MIC.Services
         /// 加载指定的方案。同时将所有工作流预加载到内存缓存中
         /// </summary>
         /// <param name="solutionName">方案名称</param>
-        public void LoadSolution(string solutionName)
+        /// <param name="configuration">应用程序配置</param>
+        public void LoadSolution(string solutionName, IConfiguration configuration)
         {
             string baseDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Solutions", solutionName);
 
             // 1. 加载主方案配置
-            CurrentSolution = JsonConfigHelper.LoadConfig<SolutionProject>(Path.Combine(baseDir, "project.json"));
+            CurrentSolution = configuration.GetSection("SolutionProject").Get<SolutionProject>();
 
             // 2. 预加载所有流程到内存（高性能切换的基础）
             WorkflowCache.Clear();
             foreach (var wfFile in CurrentSolution.WorkflowFiles)
             {
-                var wf = JsonConfigHelper.LoadConfig<WorkflowDefine>(Path.Combine(baseDir, "Workflows", wfFile));
+                var wf = configuration.GetSection($"Workflows:{wfFile}").Get<WorkflowDefine>();
                 WorkflowCache.Add(wf.Name, wf);
             }
         }
 
         /// <summary>
-        /// 保存当前方案及其所有工作流到磁盘
+        /// 保存当前方案到配置
         /// </summary>
-        public void SaveCurrentSolution()
+        /// <param name="configuration">应用程序配置</param>
+        public void SaveSolution(IConfiguration configuration)
         {
-            // 序列化 CurrentSolution 和所有 Workflows 到对应的目录
+            if (CurrentSolution == null) return;
+
+            // 保存主方案配置
+            var solutionSection = configuration.GetSection("SolutionProject");
+            solutionSection.Get<SolutionProject>().Name = CurrentSolution.Name;
+            solutionSection.Get<SolutionProject>().Description = CurrentSolution.Description;
+            solutionSection.Get<SolutionProject>().WorkflowFiles = CurrentSolution.WorkflowFiles;
+
+            // 保存工作流配置
+            foreach (var wf in WorkflowCache.Values)
+            {
+                var workflowSection = configuration.GetSection($"Workflows:{wf.Name}");
+                workflowSection.Get<WorkflowDefine>().Name = wf.Name;
+                workflowSection.Get<WorkflowDefine>().Steps = wf.Steps;
+            }
         }
     }
 }

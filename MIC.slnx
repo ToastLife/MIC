@@ -1,7 +1,10 @@
 <Solution>
   <Folder Name="/MIC.Plugins/">
+    <Project Path="MIC.Plugin.Communication/MIC.Plugin.Communication.csproj" Id="382134b0-6eef-48a2-91bf-eba233bc2521" />
     <Project Path="MIC.Plugin.MES/MIC.Plugin.MES.csproj" Id="026a0e79-4e63-4f63-b958-081bf4345939" />
     <Project Path="MIC.Plugin.Modbus/MIC.Plugin.Modbus.csproj" Id="6b58b926-2ade-4484-8596-9e1935f33bdc" />
+    <Project Path="MIC.Plugin.PLC/MIC.Plugin.PLC.csproj" Id="abde2a62-0417-42ff-bed2-6e8048473b74" />
+    <Project Path="MIC.Plugin.Robot/MIC.Plugin.Robot.csproj" Id="30b2e4a2-c4ac-4b2d-b519-9b5a50bbfe4e" />
     <Project Path="MIC.Plugin.Vision/MIC.Plugin.Vision.csproj" Id="de7ce75c-93cc-40fa-9073-6e7aa23fda13" />
   </Folder>
   <Project Path="MIC.Core/MIC.Core.csproj" Id="02433f0e-39d3-469b-9e36-fdbc26474fcc" />
